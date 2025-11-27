@@ -1,18 +1,8 @@
-# Core LangChain
-langchain==0.2.12
-langchain-core==0.2.29
-
-# LangGraph + SDK
+langchain>=1.1.0
+langchain-core>=1.1.0
 langgraph==1.0.4
-
-langgraph-checkpoint-sqlite==2.0.11
 langchain-groq==1.0.1
-
-# Server
 fastapi==0.110.0
 uvicorn==0.29.0
-
-# Utilities
 python-dotenv
-
-
+langgraph-checkpoint-sqlite==2.0.11
