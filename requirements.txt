@@ -1,6 +1,7 @@
 fastapi
 uvicorn
 langchain==1.0.7
-langgraph==1.0.3
+langgraph==1.0.4
 langchain-groq==1.0.1
 python-dotenv
+langgraph-checkpoint==3.0.1
