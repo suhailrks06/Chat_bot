@@ -1,9 +1,18 @@
-langchain==0.1.17
-langchain-core==0.1.52
+langchain==0.2.12
+langchain-core==0.2.29
+
+# LangGraph + SDK
 langgraph==1.0.4
-langchain-groq==0.1.4
-langgraph-sdk==0.1.27
-fastapi==0.95.2
-uvicorn==0.22.0
+langgraph-sdk==0.1.28
+langgraph-checkpoint-sqlite==2.0.11
+
+# Providers
+langchain-groq==1.0.1
+
+# Server
+fastapi==0.110.0
+uvicorn==0.29.0
+
+# Infra + Utiliti
 python-dotenv
 
