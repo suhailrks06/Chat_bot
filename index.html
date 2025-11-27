@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Suhail AI</title>
+<style>
+  :root{
+    --bg:#0b0c0f;
+    --panel:#0f1114;
+    --muted:#9aa4b2;
+    --accent:#10a37f; /* green accent */
+    --btn:#0ea5a0;   /* send gradient */
+    --bubble-user:#083216;
+    --bubble-bot:#05213a;
+    --glass: rgba(255,255,255,0.03);
+    --radius:14px;
+  }
+
+  html,body{height:100%;margin:0;background:var(--bg);font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;color:#e6eef3}
+  *{box-sizing:border-box}
+  /* Layout */
+  .app {
+    display:flex;
+    height:100vh;
+    width:100vw;
+    overflow:hidden;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width:280px;
+    min-width:220px;
+    background:linear-gradient(180deg,#0e1013, #0c0d10);
+    border-right:1px solid rgba(255,255,255,0.04);
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .brand {
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .logo {
+    width:40px;height:40px;border-radius:10px;
+    background:linear-gradient(135deg,#0ff1c1 0%, #10a37f 100%);
+    box-shadow: 0 6px 18px rgba(16,163,127,0.12);
+    display:flex;align-items:center;justify-content:center;font-weight:700;color:#001;
+  }
+  .brand h1{font-size:16px;margin:0;letter-spacing:0.2px}
+  .brand p{margin:0;color:var(--muted);font-size:12px}
+  .new-chat {
+    margin-top:8px;
+  }
+  .btn {
+    display:inline-flex;align-items:center;gap:8px;
+    background:linear-gradient(90deg,#0ee1c1,#0ea5a0);
+    border:none;color:#002; padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:600;
+    box-shadow:0 6px 18px rgba(14,165,160,0.08);
+  }
+
+  .threads {
+    overflow:auto;
+    flex:1;
+    padding-right:6px;
+    margin-top:6px;
+  }
+  .thread-item {
+    background:var(--glass);
+    padding:10px 12px;border-radius:10px;margin-bottom:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.02);
+    transition:all .12s;
+    color:#dfe9ee;
+    font-size:14px;
+  }
+  .thread-item:hover{transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,0.4)}
+  .thread-item.active{background:linear-gradient(90deg, rgba(16,163,127,0.12), transparent);border-color:rgba(16,163,127,0.2)}
+
+  .small-muted{color:var(--muted);font-size:13px;margin-top:6px}
+
+  /* Main chat area */
+  .main {
+    flex:1;display:flex;flex-direction:column;align-items:stretch;
+  }
+
+  .header {
+    display:flex;align-items:center;gap:12px;padding:18px;border-bottom:1px solid rgba(255,255,255,0.03);
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+  }
+  .header .title { font-weight:600;font-size:18px; color:#e6f4f1; }
+  .header .subtitle { color:var(--muted); font-size:13px; margin-left:6px; }
+
+  .chat-window {
+    padding:28px;
+    flex:1;
+    overflow:auto;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+  }
+
+  /* Welcome card */
+  .welcome {
+    width:100%;
+    max-width:760px;
+    margin:18px auto;
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:16px;padding:28px;
+    color:var(--muted); text-align:center;
+    box-shadow: 0 6px 30px rgba(2,6,23,0.6);
+  }
+  .welcome h2{margin:0 0 8px 0;color:#dff6ee}
+  .welcome p{margin:0;font-size:15px}
+
+  /* Message bubbles */
+  .messages { display:flex;flex-direction:column;gap:12px; max-width:900px; width:100%; margin:0 auto; }
+  .bubble {
+    max-width:82%;
+    padding:12px 14px;
+    border-radius:16px;
+    line-height:1.5;
+    font-size:15px;
+    white-space:pre-wrap;
+    word-wrap:break-word;
+    box-shadow: 0 6px 18px rgba(2,6,23,0.5);
+  }
+  .bubble.bot {
+    align-self:flex-start;
+    background:linear-gradient(180deg,var(--bubble-bot), #063b56);
+    color:#cfefff;
+    border-bottom-left-radius:6px;
+  }
+  .bubble.user {
+    align-self:flex-end;
+    background:linear-gradient(180deg,var(--bubble-user), #0b3b1b);
+    color:#dfffe4;
+    border-bottom-right-radius:6px;
+  }
+  .meta { font-size:12px;color:var(--muted); margin-bottom:6px; }
+
+  /* Input area like ChatGPT */
+  .composer {
+    padding:18px;border-top:1px solid rgba(255,255,255,0.03);
+    display:flex;gap:12px;align-items:flex-end;background:linear-gradient(180deg,transparent, rgba(255,255,255,0.008));
+  }
+
+  .input-wrap {
+    flex:1; display:flex; align-items:center; gap:12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+    border-radius:12px; padding:10px 12px;
+    transition: box-shadow .12s, border .12s;
+    border:1px solid rgba(255,255,255,0.03);
+  }
+  .input-wrap.focus { box-shadow: 0 8px 30px rgba(2,6,23,0.6); border-color: rgba(16,163,127,0.18); }
+
+  textarea#message {
+    width:100%; resize:none; min-height:38px; max-height:160px;
+    background:transparent;color:inherit;border:none;outline:none;font-size:15px;
+    line-height:1.45;padding:6px 0;
+  }
+
+  .send-btn {
+    display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:10px 14px;
+    background:linear-gradient(90deg,var(--btn), var(--accent)); border:none; cursor:pointer;color:#002; font-weight:700;
+    box-shadow: 0 8px 30px rgba(14,165,160,0.12);
+  }
+  .send-icon {
+    width:18px;height:18px;display:inline-block;transform:rotate(-45deg);
+  }
+
+  /* Small screens */
+  @media (max-width:880px){
+    .sidebar{position:fixed;left:-320px;z-index:40}
+    .sidebar.open{left:0}
+    .main{margin-left:0}
+    .header{padding:12px}
+    .chat-window{padding:18px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="logo">S</div>
+      <div>
+        <h1>Suhail AI</h1>
+        <p class="small-muted">Your assistant, faster</p>
+      </div>
+    </div>
+
+    <div class="new-chat">
+      <button class="btn" id="btnNew">+ New Chat</button>
+    </div>
+
+    <div class="small-muted">Recent</div>
+    <div class="threads" id="threads"></div>
+
+    <div class="small-muted" style="margin-top:8px">Tips</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.4;margin-top:6px">
+      • Ask anything — code, ideas, or docs.<br>
+      • Press <strong>Enter</strong> to send, <em>Shift+Enter</em> for newline.
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main" style="min-width:0;">
+    <header class="header">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button id="toggle" style="background:transparent;border:none;color:var(--muted);font-size:22px;cursor:pointer">☰</button>
+        <div>
+          <div class="title">Suhail AI</div>
+          <div class="subtitle" id="threadTitle">Start a new chat</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="chat-window" id="chatWindow">
+      <!-- Welcome / placeholder -->
+      <div class="welcome" id="welcomeCard">
+        <h2>👋 Welcome to Suhail AI</h2>
+        <p>Type a message below to start. Suhail AI can help with code, brainstorming, summaries, and more.</p>
+      </div>
+
+      <!-- messages container -->
+      <div class="messages" id="messages" aria-live="polite"></div>
+    </main>
+
+    <!-- Composer -->
+    <div class="composer">
+      <div class="input-wrap" id="inputWrap">
+        <textarea id="message" placeholder="Type your message..." rows="1"></textarea>
+      </div>
+      <button class="send-btn" id="sendBtn" title="Send (Enter)">
+        <!-- paper plane svg -->
+        <svg class="send-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M2 21L23 12L2 3L7 12L2 21Z" fill="#002" opacity="0.12"/>
+          <path d="M3 21L21 12L3 3L8 12L3 21Z" fill="#002"/>
+        </svg>
+        Send
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* --------- Helpers & state ---------- */
+let currentThread = null;
+const threadsEl = document.getElementById('threads');
+const messagesEl = document.getElementById('messages');
+const threadTitleEl = document.getElementById('threadTitle');
+const welcomeCard = document.getElementById('welcomeCard');
+
+const sidebar = document.getElementById('sidebar');
+document.getElementById('toggle').addEventListener('click', ()=> sidebar.classList.toggle('open'));
+
+/* focus effect for input */
+const inputWrap = document.getElementById('inputWrap');
+const messageInput = document.getElementById('message');
+messageInput.addEventListener('focus', ()=> inputWrap.classList.add('focus'));
+messageInput.addEventListener('blur', ()=> inputWrap.classList.remove('focus'));
+
+/* autoresize textarea */
+function resizeTextarea(el){
+  el.style.height = 'auto';
+  el.style.height = (el.scrollHeight) + 'px';
+}
+messageInput.addEventListener('input', ()=> resizeTextarea(messageInput));
+
+/* Enter to send, Shift+Enter newline */
+messageInput.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+/* new chat button */
+document.getElementById('btnNew').addEventListener('click', async ()=>{
+  await createThread();
+});
+
+/* send button */
+document.getElementById('sendBtn').addEventListener('click', sendMessage);
+
+/* safe fetch wrapper */
+async function api(path, opts){
+  try{
+    const res = await fetch(path, opts);
+    if(!res.ok) throw new Error('Network error');
+    return await res.json();
+  }catch(err){
+    console.error('API', err);
+    return null;
+  }
+}
+
+/* ---------- Thread & history functions ---------- */
+
+async function loadThreads(){
+  const data = await api('/thread/all');
+  threadsEl.innerHTML = '';
+  if(!data) return;
+  for(const id in data){
+    const name = data[id];
+    const div = document.createElement('div');
+    div.className = 'thread-item' + (currentThread===id ? ' active':'');
+    div.textContent = name;
+    div.onclick = ()=> openThread(id);
+    threadsEl.appendChild(div);
+  }
+}
+
+/* create a new thread (temporary name "New Chat" backend will rename on first message) */
+async function createThread(){
+  const res = await api('/thread/new', { method:'POST' });
+  if(!res) return;
+  currentThread = res.thread_id;
+  threadTitleEl.textContent = res.name || 'New Chat';
+  messagesEl.innerHTML = '';
+  welcomeCard.style.display = 'block';
+  await loadThreads();
+}
+
+/* open thread & load history */
+async function openThread(tid){
+  currentThread = tid;
+  const hist = await api(`/thread/history?thread_id=${tid}`);
+  messagesEl.innerHTML = '';
+  welcomeCard.style.display = 'none';
+  if(hist && hist.length===0){
+    welcomeCard.style.display = 'block';
+    threadTitleEl.textContent = 'New Chat';
+  }else{
+    for(const m of hist){
+      appendMessage(m.sender === 'user' ? 'user':'bot', m.text);
+    }
+    // use the thread name from list
+    const threads = await api('/thread/all');
+    threadTitleEl.textContent = threads && threads[tid] ? threads[tid] : 'Suhail AI';
+  }
+  await loadThreads();
+  scrollToBottom();
+}
+
+/* append a bubble message */
+function appendMessage(who, text){
+  welcomeCard.style.display = 'none';
+  const div = document.createElement('div');
+  div.className = 'bubble ' + (who==='user' ? 'user' : 'bot');
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.textContent = who==='user' ? 'You' : 'Suhail';
+  const content = document.createElement('div');
+  content.innerText = text;
+  div.appendChild(meta);
+  div.appendChild(content);
+  messagesEl.appendChild(div);
+}
+
+/* scroll helper */
+function scrollToBottom(){ messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+/* ---------- Send message ---------- */
+let sending = false;
+async function sendMessage(){
+  if(sending) return;
+  const text = messageInput.value.trim();
+  if(!text) return;
+
+  // if no thread, create one first
+  if(!currentThread){
+    const r = await api('/thread/new', { method:'POST' });
+    if(!r) return;
+    currentThread = r.thread_id;
+    threadTitleEl.textContent = r.name || 'New Chat';
+    await loadThreads();
+  }
+
+  // show user bubble
+  appendMessage('user', text);
+  messageInput.value = '';
+  resizeTextarea(messageInput);
+  scrollToBottom();
+
+  // optimistic UI: mark as sending
+  sending = true;
+  document.getElementById('sendBtn').disabled = true;
+
+  // call backend
+  const payload = { message: text, thread_id: currentThread };
+  const res = await api('/chat', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+
+  sending = false;
+  document.getElementById('sendBtn').disabled = false;
+
+  if(!res){
+    appendMessage('bot', 'Sorry — network error. Try again.');
+    return;
+  }
+
+  // append bot bubble (formatted)
+  appendMessage('bot', res.response || 'No reply');
+  scrollToBottom();
+
+  // update thread list/title (backend auto-named on first message)
+  const threads = await api('/thread/all');
+  if(threads && threads[currentThread]){
+    threadTitleEl.textContent = threads[currentThread];
+    await loadThreads();
+  }
+}
+
+/* initialize */
+(async function init(){
+  // load threads; if none create one
+  await loadThreads();
+  const all = await api('/thread/all');
+  if(!all || Object.keys(all).length===0){
+    await createThread();
+  } else {
+    // set first thread as current by default
+    const first = Object.keys(all)[0];
+    if(first) await openThread(first);
+  }
+})();
+</script>
+</body>
+</html>
