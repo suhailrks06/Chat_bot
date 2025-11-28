@@ -28,16 +28,25 @@
   }
 
   /* Sidebar */
-  .sidebar {
-    width:280px;
-    min-width:220px;
-    background:linear-gradient(180deg,#0e1013, #0c0d10);
-    border-right:1px solid rgba(255,255,255,0.04);
-    padding:18px;
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-  }
+ /* Sidebar */
+.sidebar {
+  width:280px;
+  min-width:220px;
+  background:linear-gradient(180deg,#0e1013, #0c0d10);
+  border-right:1px solid rgba(255,255,255,0.04);
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+
+  /* FIX: enable toggle animation */
+  position:fixed;
+  left:0;
+  top:0;
+  bottom:0;
+  transition:left 0.3s ease;
+}
+
   .brand {
     display:flex;
     align-items:center;
@@ -172,13 +181,16 @@
   }
 
   /* Small screens */
-  @media (max-width:880px){
-    .sidebar{position:fixed;left:-320px;z-index:40}
-    .sidebar.open{left:0}
-    .main{margin-left:0}
-    .header{padding:12px}
-    .chat-window{padding:18px}
+ @media (max-width:880px){
+  .sidebar{
+    left:-320px;  /* sidebar hidden by default */
+    z-index:40;
   }
+  .sidebar.open{
+    left:0;       /* sidebar visible when toggled */
+  }
+}
+
 </style>
 </head>
 <body>
@@ -249,7 +261,15 @@
 </div>
 
 <script>
+/* --------- USER ID (device based) ---------- */
+let USER_ID = localStorage.getItem("user_id");
+if (!USER_ID) {
+    USER_ID = crypto.randomUUID();
+    localStorage.setItem("user_id", USER_ID);
+}
+
 /* --------- Helpers & state ---------- */
+
 let currentThread = null;
 const threadsEl = document.getElementById('threads');
 const messagesEl = document.getElementById('messages');
@@ -303,7 +323,7 @@ async function api(path, opts){
 /* ---------- Thread & history functions ---------- */
 
 async function loadThreads(){
-  const data = await api('/thread/all');
+  const data = await api(`/thread/all?user_id=${USER_ID}`);
   threadsEl.innerHTML = '';
   if(!data) return;
   for(const id in data){
@@ -316,9 +336,13 @@ async function loadThreads(){
   }
 }
 
-/* create a new thread (temporary name "New Chat" backend will rename on first message) */
+/* create thread */
 async function createThread(){
-  const res = await api('/thread/new', { method:'POST' });
+  const res = await api('/thread/new', { 
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ user_id: USER_ID })
+  });
   if(!res) return;
   currentThread = res.thread_id;
   threadTitleEl.textContent = res.name || 'New Chat';
@@ -327,12 +351,13 @@ async function createThread(){
   await loadThreads();
 }
 
-/* open thread & load history */
+/* open thread */
 async function openThread(tid){
   currentThread = tid;
-  const hist = await api(`/thread/history?thread_id=${tid}`);
+  const hist = await api(`/thread/history?thread_id=${tid}&user_id=${USER_ID}`);
   messagesEl.innerHTML = '';
   welcomeCard.style.display = 'none';
+
   if(hist && hist.length===0){
     welcomeCard.style.display = 'block';
     threadTitleEl.textContent = 'New Chat';
@@ -340,15 +365,15 @@ async function openThread(tid){
     for(const m of hist){
       appendMessage(m.sender === 'user' ? 'user':'bot', m.text);
     }
-    // use the thread name from list
-    const threads = await api('/thread/all');
+    const threads = await api(`/thread/all?user_id=${USER_ID}`);
     threadTitleEl.textContent = threads && threads[tid] ? threads[tid] : 'Suhail AI';
   }
+
   await loadThreads();
   scrollToBottom();
 }
 
-/* append a bubble message */
+/* append bubble */
 function appendMessage(who, text){
   welcomeCard.style.display = 'none';
   const div = document.createElement('div');
@@ -366,34 +391,39 @@ function appendMessage(who, text){
 /* scroll helper */
 function scrollToBottom(){ messagesEl.scrollTop = messagesEl.scrollHeight; }
 
-/* ---------- Send message ---------- */
+/* send message */
 let sending = false;
 async function sendMessage(){
   if(sending) return;
   const text = messageInput.value.trim();
   if(!text) return;
 
-  // if no thread, create one first
   if(!currentThread){
-    const r = await api('/thread/new', { method:'POST' });
+    const r = await api('/thread/new', { 
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ user_id: USER_ID })
+    });
     if(!r) return;
     currentThread = r.thread_id;
     threadTitleEl.textContent = r.name || 'New Chat';
     await loadThreads();
   }
 
-  // show user bubble
   appendMessage('user', text);
   messageInput.value = '';
   resizeTextarea(messageInput);
   scrollToBottom();
 
-  // optimistic UI: mark as sending
   sending = true;
   document.getElementById('sendBtn').disabled = true;
 
-  // call backend
-  const payload = { message: text, thread_id: currentThread };
+  const payload = { 
+    message: text, 
+    thread_id: currentThread,
+    user_id: USER_ID
+  };
+  
   const res = await api('/chat', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -404,16 +434,14 @@ async function sendMessage(){
   document.getElementById('sendBtn').disabled = false;
 
   if(!res){
-    appendMessage('bot', 'Sorry — network error. Try again.');
+    appendMessage('bot', 'Sorry — network error.');
     return;
   }
 
-  // append bot bubble (formatted)
   appendMessage('bot', res.response || 'No reply');
   scrollToBottom();
 
-  // update thread list/title (backend auto-named on first message)
-  const threads = await api('/thread/all');
+  const threads = await api(`/thread/all?user_id=${USER_ID}`);
   if(threads && threads[currentThread]){
     threadTitleEl.textContent = threads[currentThread];
     await loadThreads();
@@ -422,17 +450,16 @@ async function sendMessage(){
 
 /* initialize */
 (async function init(){
-  // load threads; if none create one
   await loadThreads();
-  const all = await api('/thread/all');
+  const all = await api(`/thread/all?user_id=${USER_ID}`);
   if(!all || Object.keys(all).length===0){
     await createThread();
   } else {
-    // set first thread as current by default
     const first = Object.keys(all)[0];
     if(first) await openThread(first);
   }
 })();
 </script>
+
 </body>
 </html>
